@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS: SURPASS YOURSELF | Dashboard Operacional</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="nexus-header">
+        <h1 class="logo">NEXUS</h1>
+        <div class="session-controls">
+            <input type="text" id="mesa-input" placeholder="Nome da Mesa..." required class="input-mesa">
+            <button id="colar-historico-btn" class="btn-secondary">Colar Histórico Base (50)</button>
+            <button id="logout-btn" class="btn-logout">Salvar & Logout</button>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        
+        <section class="data-entry-panel">
+            <h2>Roleta Interativa</h2>
+            
+            <div id="roulette-wheel" class="roulette-wheel">
+                <div class="number-btn" data-number="0" style="background-color: green;">0</div>
+                </div>
+            
+            <div class="timeline-area">
+                <h3>Linha do Tempo Atual: (Clique no último número para desfazer)</h3>
+                <div id="timeline-ticker" class="timeline-ticker">
+                    </div>
+            </div>
+        </section>
+
+        <section class="analysis-panel">
+            <button id="gerar-analise-btn" class="btn-primary" disabled>GERAR ANÁLISE ESTELAR</button>
+
+            <div id="active-analysis" class="analysis-block active">
+                <h3 class="active-title">ANÁLISE ATIVA EM RASTREAMENTO:</h3>
+                <div id="espera-status" class="status-indicator">Aguardando gatilho...</div>
+                
+                <div id="analise-detalhes" class="details-box">
+                    </div>
+            </div>
+
+            <div class="analysis-history">
+                <h3>Histórico de Análises (Sessão Atual)</h3>
+                <div id="session-history-list">
+                    </div>
+            </div>
+        </section>
+        
+        <div id="paste-modal" class="modal">
+            <div class="modal-content">
+                <h2>Colar Histórico Base (50 Números)</h2>
+                <p>Insira os 50 números da roleta, um por linha, do mais recente para o mais antigo.</p>
+                <textarea id="historico-base-area" placeholder="Exemplo:&#10;21&#10;30&#10;18&#10;... (até 50)"></textarea>
+                <button id="processar-historico-btn" class="btn-primary">Processar Histórico</button>
+                <button id="fechar-modal-btn" class="btn-secondary">Fechar</button>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
