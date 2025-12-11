@@ -1,0 +1,184 @@
+/* ====================================================== */
+/* 1. VARIÁVEIS GLOBAIS & RESET */
+/* ====================================================== */
+:root {
+    --bg-dark: #121212; /* Fundo principal escuro */
+    --bg-card: #1e1e1e; /* Fundo dos módulos/cartões */
+    --text-light: #e0e0e0; /* Texto claro */
+    --accent-color: #00bcd4; /* Cor de destaque (opcional) */
+    --green-nexus: #4caf50; /* Verde para resultados positivos */
+    --red-nexus: #f44336; /* Vermelho para alertas/perdas */
+    --border-color: #333;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-light);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+header {
+    text-align: center;
+    padding: 10px 0;
+    border-bottom: 2px solid var(--accent-color);
+    margin-bottom: 30px;
+}
+
+h1 {
+    font-size: 2.5em;
+    font-weight: 300;
+}
+
+h1 small {
+    color: var(--accent-color);
+    font-size: 0.6em;
+    margin-left: 10px;
+}
+
+/* ====================================================== */
+/* 2. LAYOUT PRINCIPAL */
+/* ====================================================== */
+.dashboard-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr; /* Coluna Grande para Input e 2 Pequenas para Análise/Logs */
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+section {
+    background-color: var(--bg-card);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ====================================================== */
+/* 3. INPUTS E BOTÕES */
+/* ====================================================== */
+
+input[type="text"],
+textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #2c2c2c;
+    border: 1px solid var(--border-color);
+    color: var(--text-light);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: var(--accent-color);
+    color: var(--bg-dark);
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #008c9e;
+}
+
+/* ====================================================== */
+/* 4. ROLETA INTERATIVA (GRID) */
+/* ====================================================== */
+.roleta-grid {
+    display: grid;
+    grid-template-columns: repeat(13, 1fr); /* 12 Colunas + 1 para o Zero */
+    gap: 5px;
+    margin-top: 15px;
+}
+
+.numero {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+    font-size: 1.1em;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.numero:hover {
+    transform: scale(1.05);
+}
+
+/* Cores da Roleta */
+.red {
+    background-color: var(--red-nexus);
+    color: white;
+}
+
+.black {
+    background-color: #000;
+    color: white;
+}
+
+.green {
+    background-color: var(--green-nexus);
+    color: white;
+}
+
+/* ====================================================== */
+/* 5. LINHA DO TEMPO E ANÁLISE */
+/* ====================================================== */
+.history-list {
+    min-height: 50px;
+    padding: 10px;
+    background-color: #2c2c2c;
+    border-radius: 4px;
+    overflow-x: auto;
+    white-space: nowrap;
+    margin-bottom: 20px;
+}
+
+.lt-numero {
+    display: inline-block;
+    padding: 4px 8px;
+    margin-right: 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+.lt-red { background-color: var(--red-nexus); color: white; }
+.lt-black { background-color: #000; color: white; }
+.lt-green { background-color: var(--green-nexus); color: white; }
+
+.analysis-output {
+    margin-top: 20px;
+    border-top: 2px dashed var(--border-color);
+    padding-top: 15px;
+}
+
+.sugestao-titulo {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--accent-color);
+    margin-bottom: 10px;
+}
+
+.alvos {
+    color: var(--green-nexus);
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.espera {
+    font-style: italic;
+    color: #e6a700; /* Amarelo para espera */
+}
+
+.alerta {
+    color: var(--red-nexus);
+    font-weight: bold;
+}
