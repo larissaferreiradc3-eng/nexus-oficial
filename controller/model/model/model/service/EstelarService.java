@@ -1,97 +1,163 @@
-// A função VerificarEquivalencia já estará disponível no escopo do HTML.
-
 /**
- * Realiza a Análise Estelar para encontrar a Trinca de Repetição e o Alvo Nexus.
- * @param {Array<number>} linhaDoTempo - O histórico sequencial de números da roleta.
- * @param {object} config - O objeto roletaConfig (dados da roleta).
- * @returns {object} - Resultado da análise (confiança, alvos e recomendação).
+ * Lógica da Análise Estelar NERA (Nexus Estelar da Roleta Analizer).
+ * Este módulo implementa a filtragem em 3 etapas (Funil de Confluência NERA)
+ * para sugerir apostas em Trincas (grupos de 3 números).
  */
-function analisarEstelar(linhaDoTempo, config) {
-    const minHistorico = 9;
 
-    if (linhaDoTempo.length < minHistorico) {
-        return {
-            confianca: 0,
-            status: `Aguardando mais ${minHistorico - linhaDoTempo.length} números para iniciar a Análise Estelar.`,
-            alvos: []
-        };
-    }
+const AnaliseEstelarNERA = {
 
-    // Analisa os últimos 30 números, invertido (mais recente no índice 0).
-    const historicoRecente = linhaDoTempo.slice(-30).reverse(); 
+    // Define os 12 grupos de Trincas da roleta
+    TRINCAS: [
+        { nome: 'T1', numeros: [1, 2, 3] }, { nome: 'T2', numeros: [4, 5, 6] },
+        { nome: 'T3', numeros: [7, 8, 9] }, { nome: 'T4', numeros: [10, 11, 12] },
+        { nome: 'T5', numeros: [13, 14, 15] }, { nome: 'T6', numeros: [16, 17, 18] },
+        { nome: 'T7', numeros: [19, 20, 21] }, { nome: 'T8', numeros: [22, 23, 24] },
+        { nome: 'T9', numeros: [25, 26, 27] }, { nome: 'T10', numeros: [28, 29, 30] },
+        { nome: 'T11', numeros: [31, 32, 33] }, { nome: 'T12', numeros: [34, 35, 36] }
+    ],
 
-    // Busca a Trinca de Repetição (A -> B -> C equivalente)
-    const trinca = buscarTrincaEquivalente(historicoRecente, config);
+    // Define os 4 "Quartos" para análise de dispersão (aproximação do layout físico)
+    QUARTOS: [
+        { nome: 'Q1', numeros: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+        { nome: 'Q2', numeros: [9, 10, 11, 12, 13, 14, 15, 16, 17] },
+        { nome: 'Q3', numeros: [18, 19, 20, 21, 22, 23, 24, 25, 26] },
+        { nome: 'Q4', numeros: [27, 28, 29, 30, 31, 32, 33, 34, 35, 36] } // Q4 tem 10 para compensar
+    ],
 
-    if (!trinca) {
-        return {
-            confianca: 1,
-            status: "Nenhuma Trinca de Repetição Clara (A -> B -> C) identificada no histórico recente.",
-            alvos: []
-        };
-    }
+    /**
+     * Função principal que aplica o Funil de Confluência NERA.
+     * @param {number[]} historico - Array de números da roleta (do mais recente ao mais antigo).
+     * @returns {object} O resultado da análise (status, alvos, ciclo).
+     */
+    analisar(historico) {
+        if (historico.length < 20) {
+            return { status: 'INVALIDEZ', motivo: 'Histórico insuficiente (mínimo de 20).' };
+        }
 
-    // Se a Trinca for encontrada, gera a sugestão de Alvo.
-    return gerarAlvoNexus(trinca, config);
-}
-
-
-function buscarTrincaEquivalente(historicoRecente, config) {
-    // Itera para encontrar A, B, C
-    for (let i = 0; i < historicoRecente.length - 2; i++) {
-        const C = historicoRecente[i];     
-        const B = historicoRecente[i + 1]; 
-        const A = historicoRecente[i + 2]; 
-
-        // Usa a função de Equivalência do roulette_data.js
-        const eqCB = VerificarEquivalencia(C, B, config);
-        const eqCA = VerificarEquivalencia(C, A, config);
-        const eqAB = VerificarEquivalencia(A, B, config);
+        // 1. Etapa 1: Análise de Dispersão (Últimas 15 rodadas)
+        const dispersaoResultado = this.analisarDispersao(historico.slice(0, 15));
         
-        // Trinca Forte: Pelo menos 2 das 3 equivalências ocorrem.
-        let forcaTrinca = 0;
-        if (eqAB) forcaTrinca++;
-        if (eqCB) forcaTrinca++;
-        if (eqCA) forcaTrinca++;
-
-        if (forcaTrinca >= 2) {
-            return { A, B, C, forca: forcaTrinca };
+        if (dispersaoResultado.status === 'ALTA') {
+            return { status: 'RECUPERACAO', motivo: 'Dispersão alta e equilibrada. Aguardar desequilíbrio.' };
         }
-    }
 
-    return null;
-}
+        // 2. Etapa 2: Análise da Frequência de Trincas
+        const trincasEmAtraso = this.analisarAtrasoTrincas(historico);
 
-
-function gerarAlvoNexus(trinca, config) {
-    const C = trinca.C;
-    const alvos = [];
-
-    // 1. Alvo Principal: Espelho Fixo de C
-    const espelhoC = config.ESPELHOS_FIXOS[C];
-    if (espelhoC) {
-        alvos.push(espelhoC);
-    }
-
-    // 2. Alvo Secundário: Vizinhos de C
-    const vizinhosC = config.VIZINHOS_CILINDRO[C] || [];
-    alvos.push(...vizinhosC);
-
-    // 3. Alvo de Proteção: O Terminal de C (todos os outros números com o mesmo terminal)
-    const terminalC = config.PROPRIEDADES[C].terminal;
-    for (const num in config.PROPRIEDADES) {
-        if (config.PROPRIEDADES[num].terminal === terminalC && parseInt(num) !== C && parseInt(num) !== 0) {
-            alvos.push(parseInt(num));
+        if (trincasEmAtraso.length === 0) {
+            return { status: 'RECUPERACAO', motivo: 'Nenhuma Trinca em atraso estatístico significativo.' };
         }
-    }
-    
-    // Remove duplicatas e o próprio C
-    const alvosFinais = [...new Set(alvos)].filter(n => n !== C);
 
-    return {
-        confianca: trinca.forca * 3, 
-        status: `Trinca de Repetição (A:${trinca.A}, B:${trinca.B}, C:${trinca.C}) identificada.`,
-        alvos: alvosFinais,
-        recomendacao: "Aguardar 1 ou 2 giros para confirmar a quebra da Trinca e entrar no próximo Echo de C."
-    };
-}
+        // 3. Etapa 3: Confluência NERA (Atraso + Baixa Dispersão)
+        const alvosSugeridos = this.confluenciaNERA(trincasEmAtraso, dispersaoResultado.quartosDominantes);
+
+        if (alvosSugeridos.length > 0) {
+            return {
+                status: 'CONVERGENCIA',
+                cicloEstelar: dispersaoResultado.status,
+                alvos: alvosSugeridos
+            };
+        } else {
+            return { status: 'INVALIDEZ', motivo: 'Atraso detectado, mas sem confluência com o padrão de dispersão.' };
+        }
+    },
+
+    analisarDispersao(historicoRecente) {
+        const contagemQuartos = {};
+        this.QUARTOS.forEach(q => contagemQuartos[q.nome] = 0);
+
+        historicoRecente.forEach(numero => {
+            this.QUARTOS.forEach(quarto => {
+                if (quarto.numeros.includes(numero)) {
+                    contagemQuartos[quarto.nome]++;
+                }
+            });
+        });
+
+        const valores = Object.values(contagemQuartos);
+        const media = valores.reduce((a, b) => a + b) / valores.length;
+        
+        // Define um limite de desequilíbrio (ex: se o mais frequente tiver 2x mais que o menos frequente)
+        const max = Math.max(...valores);
+        const min = Math.min(...valores);
+
+        if (max > media * 1.5 && min < media * 0.5) {
+            // Alta concentração em alguns quartos (Baixa Dispersão)
+            const quartosDominantes = Object.keys(contagemQuartos).filter(q => contagemQuartos[q] === min);
+            return { status: 'BAIXA', quartosDominantes: quartosDominantes };
+        }
+        
+        // Dispersão considerada alta/equilibrada
+        return { status: 'ALTA', quartosDominantes: [] };
+    },
+
+    analisarAtrasoTrincas(historicoCompleto) {
+        const trincasAtrasadas = [];
+        // Frequência esperada por Trinca: ~3.08% ou 1 em 32 (nas 100 rodadas).
+        // Em 20 rodadas, espera-se ~0.65 acertos por trinca.
+        const LIMITE_ATRASO = 0.5; // Limite de ocorrências em relação à esperada
+
+        const contagemTrincas = this.TRINCAS.map(trinca => {
+            let count = 0;
+            historicoCompleto.forEach(num => {
+                if (trinca.numeros.includes(num)) {
+                    count++;
+                }
+            });
+            // Calcula a frequência média esperada para o tamanho do histórico
+            const frequenciaEsperada = historicoCompleto.length * (3 / 37); 
+            
+            return {
+                nome: trinca.nome,
+                numeros: trinca.numeros,
+                contagem: count,
+                atraso: frequenciaEsperada - count
+            };
+        });
+
+        // Seleciona trincas que estão significativamente atrasadas
+        contagemTrincas.forEach(t => {
+            // Se a contagem real for menor que 50% da contagem esperada E o atraso for > 1
+            if (t.contagem < t.frequenciaEsperada * LIMITE_ATRASO && t.atraso > 1) {
+                trincasAtrasadas.push(t);
+            }
+        });
+
+        return trincasAtrasadas;
+    },
+
+    confluenciaNERA(trincasAtrasadas, quartosEmFalta) {
+        const alvosFinais = [];
+
+        trincasAtrasadas.forEach(trinca => {
+            const trincaNum = trinca.numeros;
+            let pertenceAQuartoEmFalta = false;
+
+            // 1. Verifica se a Trinca pertence a um dos "Quartos em Falta" (que menos saiu)
+            quartosEmFalta.forEach(nomeQuarto => {
+                const quarto = this.QUARTOS.find(q => q.nome === nomeQuarto);
+                if (quarto && trincaNum.every(num => quarto.numeros.includes(num))) {
+                    pertenceAQuartoEmFalta = true;
+                }
+            });
+
+            // Se estiver atrasada E pertencer ao Quarto que está com baixa ocorrência, é um alvo forte.
+            if (pertenceAQuartoEmFalta) {
+                alvosFinais.push(trinca);
+            }
+        });
+
+        // Se não houver confluência perfeita, mas houver muito atraso, sugere o mais atrasado.
+        if (alvosFinais.length === 0 && trincasAtrasadas.length > 0) {
+            // Ordena pelo maior atraso e sugere a trinca mais atrasada
+            trincasAtrasadas.sort((a, b) => b.atraso - a.atraso);
+            alvosFinais.push(trincasAtrasadas[0]); 
+        }
+
+        return alvosFinais;
+    }
+};
+
+// Exporta a lógica para ser usada pelo ui.js
+// No ambiente de navegador, ela estará disponível globalmente.
+// Ex: window.AnaliseEstelarNERA
