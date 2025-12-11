@@ -42,6 +42,13 @@
         
         <section class="logs-module">
             <h3>Logs de Entradas (Green / Red)</h3>
+            
+            <div class="log-controls">
+                <p>Registrar Resultado da Sugestão</p>
+                <button class="btn-green" onclick="registrarEntrada('Green')">✅ Green (Ganhou)</button>
+                <button class="btn-red" onclick="registrarEntrada('Red')">❌ Red (Perdeu)</button>
+            </div>
+            <hr>
             <div id="log-entradas">
                 </div>
             <button onclick="logoutSalvarSessao()">LOGOUT & Salvar Sessão</button>
