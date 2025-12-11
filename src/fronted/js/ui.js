@@ -208,7 +208,8 @@ function fazerLogout() {
     salvarSessao(); // Garante o salvamento antes de sair
     localStorage.removeItem('nexus_autenticado'); // Remove o token de autenticação
     alert("Sessão finalizada. Faça login novamente para acessar.");
-    window.location.reload(); // Recarrega a página para voltar à tela de login
+    // Redireciona para a tela de login/recarrega a página para aplicar a autenticação
+    window.location.reload(); 
 }
 
 /**
@@ -264,7 +265,7 @@ function exportarLogs() {
 }
 
 // ======================================================
-// 8. LÓGICA DE AUTENTICAÇÃO (NOVO)
+// 8. LÓGICA DE AUTENTICAÇÃO
 // ======================================================
 
 /**
@@ -279,14 +280,14 @@ function fazerLogin() {
         // Autenticação bem-sucedida
         localStorage.setItem('nexus_autenticado', 'true');
         loginMessage.textContent = 'Login bem-sucedido! Acessando...';
-        loginMessage.classList.remove('alerta'); // Remove a classe vermelha
+        loginMessage.classList.remove('alerta'); 
         loginMessage.style.color = 'var(--green-nexus)';
         
         // Esconde a tela de login e mostra o conteúdo principal
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-content').classList.remove('hidden');
 
-        // Continua a inicialização da aplicação (carregar roleta, logs, etc.)
+        // Continua a inicialização da aplicação
         inicializarAplicacao();
 
     } else {
@@ -302,18 +303,24 @@ function fazerLogin() {
  * Controla qual tela deve ser mostrada.
  */
 function verificarAutenticacao() {
+    // Tenta obter o token de autenticação
     const autenticado = localStorage.getItem('nexus_autenticado');
     
-    if (autenticado === 'true') {
+    // Tenta obter os elementos, tratando se eles não existirem (apenas por segurança)
+    const loginScreen = document.getElementById('login-screen');
+    const mainContent = document.getElementById('main-content');
+    
+    if (autenticado === 'true' && mainContent && loginScreen) {
         // Se estiver autenticado, esconde o login e mostra o conteúdo
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-content').classList.remove('hidden');
+        loginScreen.classList.add('hidden');
+        mainContent.classList.remove('hidden');
         inicializarAplicacao();
-    } else {
+    } else if (loginScreen && mainContent) {
         // Se não estiver autenticado, garante que o login é mostrado
-        document.getElementById('login-screen').classList.remove('hidden');
-        document.getElementById('main-content').classList.add('hidden');
+        loginScreen.classList.remove('hidden');
+        mainContent.classList.add('hidden');
     }
+    // Caso contrário, não faz nada (deixa o HTML como está)
 }
 
 /**
