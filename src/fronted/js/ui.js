@@ -169,7 +169,7 @@ function renderizarLog() {
 }
 
 // ======================================================
-// 7. Persistência de Dados (localStorage)
+// 7. Persistência de Dados (localStorage) & Controles
 // ======================================================
 
 /**
@@ -206,7 +206,7 @@ function logoutSalvarSessao() {
 }
 
 /**
- * Reseta o Saldo e o Histórico de Logs da Sessão atual. (NOVA FUNÇÃO)
+ * Reseta o Saldo e o Histórico de Logs da Sessão atual.
  */
 function resetSessao() {
     if (confirm("Tem certeza que deseja resetar o Saldo e todos os Logs? Esta ação iniciará uma nova sessão e não pode ser desfeita.")) {
@@ -224,6 +224,47 @@ function resetSessao() {
         
         alert("Sessão resetada! Saldo zerado e logs limpos.");
     }
+}
+
+/**
+ * Exporta o log de entradas (logEntradas) para um arquivo CSV. (NOVA FUNÇÃO)
+ */
+function exportarLogs() {
+    if (logEntradas.length === 0) {
+        alert("Não há entradas no log para exportar.");
+        return;
+    }
+
+    // Cabeçalho do arquivo CSV
+    const header = "ID,Timestamp,Resultado,Lucro,Historico\n";
+
+    // Mapeia o array de objetos logEntradas para linhas CSV
+    const csvContent = logEntradas.map(entrada => {
+        // Garantir que a vírgula dentro do histórico não quebre o CSV (usamos aspas)
+        const historicoCsv = `"${entrada.historico.join(',')}"`; 
+        
+        return `${entrada.id},${entrada.timestamp},${entrada.resultado},${entrada.lucro.toFixed(2)},${historicoCsv}`;
+    }).join('\n');
+
+    const fullCsv = header + csvContent;
+
+    // Lógica para forçar o download do arquivo
+    const blob = new Blob([fullCsv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    
+    // Nome do arquivo: Nexus_Logs_AAAA-MM-DD.csv
+    const today = new Date().toISOString().slice(0, 10);
+    link.setAttribute("download", `Nexus_Logs_${today}.csv`);
+    
+    // Simula o clique no link
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    alert(`Log de ${logEntradas.length} entradas exportado com sucesso!`);
 }
 
 // ======================================================
