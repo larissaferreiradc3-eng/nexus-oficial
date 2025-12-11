@@ -7,56 +7,81 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <header>
-        <h1>NEXUS <small>Analizer</small></h1>
-        <p>Decodificando a Repetição Cíclica da Roleta</p>
-    </header>
-
-    <main class="dashboard-container">
-        
-        <section class="data-input-module">
-            <h2>Mesa: <input type="text" id="mesa-nome" placeholder="Nome da Mesa/Roleta"></h2>
-            
-            <div class="input-area">
-                <h3>Colar Histórico Base (50 Últimos):</h3>
-                <textarea id="historico-paste" rows="5" placeholder="Cole os 50 números aqui (separados por vírgula ou em linhas)"></textarea>
-                <button onclick="carregarHistorico()">Carregar Histórico</button>
-            </div>
-
-            <div id="roleta-interativa" class="roleta-grid">
-                </div>
-        </section>
-
-        <section class="analysis-module">
-            <h3>Linha do Tempo Editável (Ciclo Atual)</h3>
-            <div id="linha-do-tempo" class="history-list">
-                </div>
-
-            <div class="analysis-output">
-                <button onclick="gerarAnaliseEstelar()">Atualizar Análise NEXUS</button> 
-                <div id="analise-sugerida">
-                    <p>Status: Aguardando 9 números para iniciar análise Estelar.</p>
-                </div>
-            </div>
-        </section>
-        
-        <section class="logs-module">
-            <h3>Logs de Entradas (Green / Red)</h3>
-            
-            <div class="log-controls">
-                <p>Registrar Resultado da Sugestão</p>
-                <button class="btn-green" onclick="registrarEntrada('Green')">✅ Green (Ganhou)</button>
-                <button class="btn-red" onclick="registrarEntrada('Red')">❌ Red (Perdeu)</button>
-            </div>
-            <hr>
-            <div id="log-entradas">
-                </div>
-            <button onclick="logoutSalvarSessao()">LOGOUT & Salvar Sessão</button>
-        </section>
-
-    </main>
     
-    <script src="../backend/data/roulette_data.js"></script>
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <h1>NEXUS <small>Autenticação</small></h1>
+            <p>Acesso restrito à ferramenta de análise Estelar.</p>
+            
+            <label for="username">Usuário (Ex: nexus):</label>
+            <input type="text" id="username" placeholder="Digite seu usuário">
+            
+            <label for="password">Senha (Ex: 12345):</label>
+            <input type="password" id="password" placeholder="Digite sua senha">
+            
+            <button onclick="fazerLogin()">Entrar</button>
+            <p id="login-message" class="alerta"></p>
+        </div>
+    </div>
+
+    <div id="main-content" class="hidden">
+        
+        <header>
+            <h1>NEXUS <small>Analizer</small></h1>
+            <p>Decodificando a Repetição Cíclica da Roleta</p>
+        </header>
+
+        <main class="dashboard-container">
+            
+            <section class="data-input-module">
+                <h2>Mesa: <input type="text" id="mesa-nome" placeholder="Nome da Mesa/Roleta"></h2>
+                
+                <div class="input-area">
+                    <h3>Colar Histórico Base (50 Últimos):</h3>
+                    <textarea id="historico-paste" rows="5" placeholder="Cole os 50 números aqui (separados por vírgula ou em linhas)"></textarea>
+                    <button onclick="carregarHistorico()">Carregar Histórico</button>
+                </div>
+
+                <div id="roleta-interativa" class="roleta-grid">
+                    </div>
+            </section>
+
+            <section class="analysis-module">
+                <h3>Linha do Tempo Editável (Ciclo Atual)</h3>
+                <div id="linha-do-tempo" class="history-list">
+                    </div>
+
+                <div class="analysis-output">
+                    <button onclick="gerarAnaliseEstelar()">Atualizar Análise NEXUS</button> 
+                    <div id="analise-sugerida">
+                        <p>Status: Aguardando 9 números para iniciar análise Estelar.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="logs-module">
+                <h3>Logs de Entradas (Green / Red)</h3>
+                
+                <div class="log-controls">
+                    <p>Registrar Resultado da Sugestão</p>
+                    <button class="btn-green" onclick="registrarEntrada('Green')">✅ Green (Ganhou)</button>
+                    <button class="btn-red" onclick="registrarEntrada('Red')">❌ Red (Perdeu)</button>
+                </div>
+                <hr>
+                
+                <div id="log-entradas">
+                    </div>
+                
+                <div class="session-controls">
+                    <button onclick="fazerLogout()">Sair (Logout)</button> <button class="btn-red" onclick="resetSessao()">Resetar Saldo/Logs</button>
+                    <button onclick="exportarLogs()" class="btn-export">Exportar Logs (CSV)</button> 
+                </div>
+                
+            </section>
+
+        </main>
+        
+    </div> <script src="../backend/data/roulette_data.js"></script>
     <script src="../backend/algorithms/estelar.js"></script>
     <script src="js/ui.js"></script>
 </body>
