@@ -80,7 +80,7 @@ function adicionarNumeroAoHistoricoUI(numero, animar = true) {
     const timeline = document.getElementById('historico-timeline');
     const divNum = document.createElement('div');
     
-    // Determina a cor do número
+    // Determina a cor do número (mantida a lógica de cor padrão)
     let cor;
     if (numero === 0) cor = 'zero';
     else if (numero >= 1 && numero <= 10 && numero % 2 !== 0) cor = 'red';
