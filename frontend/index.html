@@ -3,86 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS - Surpass Yourself</title>
+    <title>Nexus Analizer - Funil NERA</title>
+    
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    
-    <div id="login-screen" class="login-container">
-        <div class="login-box">
-            <h1>NEXUS <small>Autenticação</small></h1>
-            <p>Acesso restrito à ferramenta de análise Estelar.</p>
+
+    <div class="container">
+
+        <div id="login-screen">
+            <h1>Nexus Analizer - Login</h1>
+            <p>Faça login ou registre-se para acessar o painel de análise.</p>
             
-            <label for="username">Usuário (Ex: nexus):</label>
-            <input type="text" id="username" placeholder="Digite seu usuário">
-            
-            <label for="password">Senha (Ex: 12345):</label>
-            <input type="password" id="password" placeholder="Digite sua senha">
-            
-            <button onclick="fazerLogin()">Entrar</button>
-            <p id="login-message" class="alerta"></p>
+            <form id="login-form">
+                <label for="username">Usuário:</label>
+                <input type="text" id="username" required>
+                
+                <label for="password">Senha:</label>
+                <input type="password" id="password" required>
+                
+                <button type="submit" class="btn-primary">Acessar Analizer</button>
+            </form>
+            <p id="login-message" style="color: #cf6679;"></p>
         </div>
+
+        <div id="main-content" class="hidden">
+            
+            <div id="header-panel" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h1>Análise Estelar da Roleta</h1>
+                <div style="text-align: right;">
+                    <span id="current-user">Usuário: N/A</span> |
+                    <span>Saldo: R$ <span id="current-saldo">0.00</span></span>
+                    <button id="logout-btn" class="btn-logout" style="margin-left: 10px;">Logout</button>
+                    <button id="reset-btn" class="btn-red">Resetar Sessão</button>
+                </div>
+            </div>
+
+            <section id="input-section">
+                <h2>Inserir Novo Resultado</h2>
+                <input type="number" id="roleta-input" min="0" max="36" placeholder="Número (0 a 36)" required>
+                <p style="font-size: 0.9em; color: #bb86fc;">* Os dados serão processados imediatamente pela lógica NERA.</p>
+            </section>
+            
+            <section id="historico-section" style="margin-top: 20px;">
+                <h2>Linha do Tempo (Últimos 100)</h2>
+                <div id="historico-timeline">
+                    </div>
+            </section>
+            
+            <div id="dashboard">
+                
+                <div id="main-panel">
+                    
+                    <section id="analise-section">
+                        <h2>Funil de Confluência NERA</h2>
+                        <div id="analise-sugerida">
+                            <p>Status: Aguardando 20 resultados para análise completa.</p>
+                        </div>
+                    </section>
+                    
+                    <div id="log-buttons" class="hidden" style="margin-top: 15px;">
+                        <h3>Registro de Aposta:</h3>
+                        <button id="log-green-btn" class="btn-green" title="Aposta deu GREEN (Sucesso)">Registrar GREEN (Vitória)</button>
+                        <button id="log-red-btn" class="btn-red" title="Aposta deu RED (Perda)">Registrar RED (Perda)</button>
+                    </div>
+
+                </div>
+
+                <div id="log-panel">
+                    <h2>Logs da Sessão</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Rodada</th>
+                                <th>Alvos</th>
+                                <th>Valor</th>
+                                <th>Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-table-body">
+                            </tbody>
+                    </table>
+                </div>
+                
+            </div>
+        </div>
+
     </div>
 
-    <div id="main-content" class="hidden">
-        
-        <header>
-            <h1>NEXUS <small>Analizer</small></h1>
-            <p>Decodificando a Repetição Cíclica da Roleta</p>
-        </header>
-
-        <main class="dashboard-container">
-            
-            <section class="data-input-module">
-                <h2>Mesa: <input type="text" id="mesa-nome" placeholder="Nome da Mesa/Roleta"></h2>
-                
-                <div class="input-area">
-                    <h3>Colar Histórico Base (50 Últimos):</h3>
-                    <textarea id="historico-paste" rows="5" placeholder="Cole os 50 números aqui (separados por vírgula ou em linhas)"></textarea>
-                    <button onclick="carregarHistorico()">Carregar Histórico</button>
-                </div>
-
-                <div id="roleta-interativa" class="roleta-grid">
-                    </div>
-            </section>
-
-            <section class="analysis-module">
-                <h3>Linha do Tempo Editável (Ciclo Atual)</h3>
-                <div id="linha-do-tempo" class="history-list">
-                    </div>
-
-                <div class="analysis-output">
-                    <button onclick="gerarAnaliseEstelar()">Atualizar Análise NEXUS</button> 
-                    <div id="analise-sugerida">
-                        <p>Status: Aguardando 9 números para iniciar análise Estelar.</p>
-                    </div>
-                </div>
-            </section>
-            
-            <section class="logs-module">
-                <h3>Logs de Entradas (Green / Red)</h3>
-                
-                <div class="log-controls">
-                    <p>Registrar Resultado da Sugestão</p>
-                    <button class="btn-green" onclick="registrarEntrada('Green')">✅ Green (Ganhou)</button>
-                    <button class="btn-red" onclick="registrarEntrada('Red')">❌ Red (Perdeu)</button>
-                </div>
-                <hr>
-                
-                <div id="log-entradas">
-                    </div>
-                
-                <div class="session-controls">
-                    <button onclick="fazerLogout()">Sair (Logout)</button> <button class="btn-red" onclick="resetSessao()">Resetar Saldo/Logs</button>
-                    <button onclick="exportarLogs()" class="btn-export">Exportar Logs (CSV)</button> 
-                </div>
-                
-            </section>
-
-        </main>
-        
-    </div> <script src="../backend/data/roulette_data.js"></script>
-    <script src="../backend/algorithms/estelar.js"></script>
+    <script src="roulette_data.js"></script>
+    <script src="js/backend/algorithms/estelar.js"></script>
     <script src="js/ui.js"></script>
+
 </body>
 </html>
