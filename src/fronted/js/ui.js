@@ -1,349 +1,292 @@
 // VARIÁVEIS GLOBAIS
-let linhaDoTempo = [];
-let roletaData = {}; // Objeto roletaConfig
-let logEntradas = []; // Array para armazenar o histórico de resultados
-let saldo = 0; // Saldo inicial para gestão de risco
+let historicoAtual = [];
+let logEntradas = [];
+let saldo = 0;
+let usuarioLogado = null; 
 
-// Credenciais de Exemplo (Hardcoded)
-const VALID_USERNAME = "nexus";
-const VALID_PASSWORD = "12345";
+// ESTRATÉGIA NERA: Estruturas de Dados
+let Tabela_Alvos_NERA = {}; 
+let NERA_Alvos_Atrasados = {}; // Rastreia alvos que foram invalidados e aguardam a 7ª rodada
 
 // ======================================================
-// 1. Geração da Roleta Interativa na tela
+// FUNÇÕES DE PERSISTÊNCIA (Local Storage)
 // ======================================================
-function renderizarRoleta() {
-    const roletaDiv = document.getElementById('roleta-interativa');
-    roletaDiv.innerHTML = ''; 
 
-    for (let i = 0; i <= 36; i++) {
-        const numeroDiv = document.createElement('div');
-        numeroDiv.textContent = i;
-        numeroDiv.classList.add('numero');
-        
-        // Define cor usando o mapeamento do backend
-        if (roletaData.PROPRIEDADES[i]) {
-            numeroDiv.classList.add(roletaData.PROPRIEDADES[i].cor);
-        } else {
-             numeroDiv.classList.add('neutro');
-        }
-        
-        numeroDiv.onclick = () => atualizarLinhaTempo(i);
-        roletaDiv.appendChild(numeroDiv);
-    }
+function salvarDadosUsuario(username) {
+    // Implemente a lógica de salvar usuários e hash de senha aqui
+    const usuarios = JSON.parse(localStorage.getItem('nexus_usuarios') || '{}');
+    usuarios[username] = { senhaHash: calcularHashHistorico(username), saldo: saldo };
+    localStorage.setItem('nexus_usuarios', JSON.stringify(usuarios));
 }
 
-// ======================================================
-// 2. Função principal para adicionar/remover número na Linha do Tempo
-// ======================================================
-function atualizarLinhaTempo(numero) {
-    const ultimoNumero = linhaDoTempo[linhaDoTempo.length - 1];
-
-    if (numero === ultimoNumero && linhaDoTempo.length > 0) {
-        // Regra de Correção Rápida: Clicar novamente remove o último número
-        linhaDoTempo.pop();
-    } else {
-        linhaDoTempo.push(numero);
-    }
-
-    renderizarLinhaDoTempo();
-    gerarAnaliseEstelar(); // Atualiza a análise sempre que o histórico muda
+function carregarDadosUsuario(username) {
+    const usuarios = JSON.parse(localStorage.getItem('nexus_usuarios') || '{}');
+    return usuarios[username];
 }
 
-// ======================================================
-// 3. Renderiza a Linha do Tempo na tela
-// ======================================================
-function renderizarLinhaDoTempo() {
-    const linhaDiv = document.getElementById('linha-do-tempo');
-    
-    // Garantindo que a classe da cor está sendo usada corretamente
-    linhaDiv.innerHTML = linhaDoTempo.map(n => {
-        const cor = roletaData.PROPRIEDADES[n] ? roletaData.PROPRIEDADES[n].cor : 'neutro';
-        return `<span class="lt-numero lt-${cor}">${n}</span>`;
-    }).join(' → ');
-}
-
-// ======================================================
-// 4. Carrega o Histórico Base colado
-// ======================================================
-function carregarHistorico() {
-    const texto = document.getElementById('historico-paste').value;
-    const historicoArray = texto.split(/[\s,;]+/)
-                                .filter(n => n.length > 0)
-                                .map(n => parseInt(n))
-                                .filter(n => n >= 0 && n <= 36);
-
-    if (historicoArray.length > 0) {
-        linhaDoTempo = [...historicoArray]; 
-        renderizarLinhaDoTempo();
-        gerarAnaliseEstelar();
-        alert(`Histórico Base carregado! ${historicoArray.length} números.`);
-    } else {
-        alert("Nenhum número válido encontrado.");
-    }
-}
-
-// ======================================================
-// 5. Função que chama o Módulo de Análise Estelar
-// ======================================================
-function gerarAnaliseEstelar() {
-    // Chama a função do backend (estelar.js)
-    const resultado = analisarEstelar(linhaDoTempo, roletaData); 
-    const analiseDiv = document.getElementById('analise-sugerida');
-    
-    // Monta a exibição do resultado
-    if (resultado.alvos && resultado.alvos.length > 0) {
-        analiseDiv.innerHTML = `
-            <p class="sugestao-titulo">🎯 ANÁLISE NEXUS (Estelar)</p>
-            <p><strong>Status:</strong> ${resultado.status}</p>
-            <p><strong>Força/Confiança:</strong> ${resultado.confianca}/9</p>
-            <p><strong>Alvos Sugeridos:</strong> <span class="alvos">${resultado.alvos.join(', ')}</span></p>
-            <p class="espera">Ação: ${resultado.recomendacao}</p>
-        `;
-    } else {
-         analiseDiv.innerHTML = `<p class="alerta">${resultado.status}</p>`;
-    }
-}
-
-// ======================================================
-// 6. Gestão de Log (Green/Red) e Saldo
-// ======================================================
-
-/**
- * Registra o resultado de uma aposta baseada na sugestão Nexus.
- * @param {string} resultado - 'Green' ou 'Red'.
- */
-function registrarEntrada(resultado) {
-    if (linhaDoTempo.length === 0) {
-        alert("Adicione alguns números à Linha do Tempo antes de registrar uma entrada!");
-        return;
-    }
-    
-    const valorEntrada = 1; // Unidade de aposta (ex: 1 Real/Dólar)
-    let lucro = 0;
-
-    // Simula uma vitória em número cheio. Se você usa cobertura, ajuste aqui.
-    if (resultado === 'Green') {
-        lucro = 35 * valorEntrada; // Vitória 35:1 (Lucro de 35)
-        saldo += lucro;
-    } else {
-        lucro = -valorEntrada; // Perda da unidade
-        saldo += lucro;
-    }
-
-    const entrada = {
-        id: logEntradas.length + 1,
-        timestamp: new Date().toLocaleTimeString(),
-        resultado: resultado,
-        lucro: lucro,
-        historico: linhaDoTempo.slice() // Salva uma cópia do histórico da aposta
+function salvarSessao(username) {
+    const dadosSessao = {
+        historico: historicoAtual,
+        logs: logEntradas,
+        saldo: saldo,
+        Tabela_Alvos_NERA: Tabela_Alvos_NERA, 
+        NERA_Alvos_Atrasados: NERA_Alvos_Atrasados // Salva a tabela de Atraso
     };
-
-    logEntradas.push(entrada);
-    salvarSessao(); // Salva a sessão após cada entrada
-    
-    // Limpar e reiniciar o ciclo após a aposta
-    linhaDoTempo = []; 
-    renderizarLinhaDoTempo();
-    gerarAnaliseEstelar(); 
-    
-    renderizarLog();
-    alert(`Entrada Registrada: ${resultado}! Saldo Atual: ${saldo.toFixed(2)}`);
+    localStorage.setItem(`nexus_sessao_${username}`, JSON.stringify(dadosSessao));
 }
 
-/**
- * Renderiza o log de entradas e o saldo na interface.
- */
-function renderizarLog() {
-    const logDiv = document.getElementById('log-entradas');
-    logDiv.innerHTML = `<h4>💰 Saldo Atual: R$ ${saldo.toFixed(2)}</h4>`;
+function carregarSessao(username) {
+    const data = localStorage.getItem(`nexus_sessao_${username}`);
+    if (data) {
+        const sessao = JSON.parse(data);
+        historicoAtual = sessao.historico || [];
+        logEntradas = sessao.logs || [];
+        saldo = sessao.saldo || 0;
+        Tabela_Alvos_NERA = sessao.Tabela_Alvos_NERA || {};
+        NERA_Alvos_Atrasados = sessao.NERA_Alvos_Atrasados || {}; // Carrega a tabela de Atraso
+    }
+}
 
-    // Mostra as 10 entradas mais recentes
-    logEntradas.slice(-10).reverse().forEach(entrada => {
-        const classe = entrada.resultado === 'Green' ? 'log-green' : 'log-red';
-        const sinal = entrada.lucro >= 0 ? '+' : '';
+// ======================================================
+// FUNÇÕES DE LOGIN/REGISTRO
+// ======================================================
+
+window.fazerLogin = function(username, password) {
+    const usuarioSalvo = carregarDadosUsuario(username);
+    const hashLogin = calcularHashHistorico(password);
+    
+    if (usuarioSalvo && usuarioSalvo.senhaHash === hashLogin) {
+        usuarioLogado = username;
+        iniciarSessao(username);
+        return true;
+    } else {
+        document.getElementById('login-message').textContent = 'Erro: Usuário ou senha incorretos.';
+        return false;
+    }
+}
+
+window.iniciarSessao = function(username) {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('main-content').classList.remove('hidden');
+    document.getElementById('current-user').textContent = `Usuário: ${username}`;
+    carregarSessao(username);
+    atualizarLinhaDoTempo();
+    atualizarLogs();
+    atualizarAnalise();
+}
+
+window.fazerLogout = function() {
+    if (usuarioLogado) {
+        salvarSessao(usuarioLogado);
+    }
+    
+    historicoAtual = [];
+    logEntradas = [];
+    saldo = 0;
+    Tabela_Alvos_NERA = {}; 
+    NERA_Alvos_Atrasados = {}; // RESET DA TABELA NERA
+    usuarioLogado = null;
+    
+    document.getElementById('main-content').classList.add('hidden');
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('login-message').textContent = 'Logout realizado. Sessão salva.';
+}
+
+// ======================================================
+// FUNÇÕES DE DADOS E HASH
+// ======================================================
+
+function calcularHashHistorico(data) {
+    // Simulação simples de hash para rastreamento de estado
+    return btoa(data.toString()).substring(0, 8);
+}
+
+function carregarHistorico(historicoStr) {
+    // Simulação de carregamento de histórico via JSON/texto
+    try {
+        const novoHistorico = JSON.parse(historicoStr);
+        if (Array.isArray(novoHistorico) && novoHistorico.every(n => typeof n === 'number' && n >= 0 && n <= 36)) {
+            historicoAtual = novoHistorico.slice(0, 100);
+            Tabela_Alvos_NERA = {}; // Limpa NERA ao carregar novo histórico
+            NERA_Alvos_Atrasados = {}; // Limpa atrasos
+            
+            // Re-processa NERA se um histórico grande for carregado
+            historicoAtual.slice().reverse().forEach(num => {
+                 const resultadosNERA = Processar_Resultado_NERA(historicoAtual, num, Tabela_Alvos_NERA, NERA_Alvos_Atrasados, roletaConfig);
+                 Tabela_Alvos_NERA = resultadosNERA.Tabela_Alvos;
+                 NERA_Alvos_Atrasados = resultadosNERA.NERA_Atrasados;
+            });
+            
+            atualizarLinhaDoTempo();
+            atualizarAnalise();
+            if (usuarioLogado) salvarSessao(usuarioLogado);
+            return true;
+        }
+    } catch (e) {
+        return false;
+    }
+    return false;
+}
+
+window.inserirNumeroManual = function(numero) {
+    const num = parseInt(numero);
+    if (!isNaN(num) && num >= 0 && num <= 36) {
         
-        logDiv.innerHTML += `
-            <div class="log-item ${classe}">
-                [#${entrada.id} | ${entrada.timestamp}] 
-                **${entrada.resultado}** | Lucro: ${sinal}${entrada.lucro.toFixed(2)}
-                <small>Histórico: ${entrada.historico.join(',')}</small>
-            </div>
-        `;
+        // --- Executa o Processamento NERA ANTES de adicionar ao histórico ---
+        const resultadosNERA = Processar_Resultado_NERA(historicoAtual, num, Tabela_Alvos_NERA, NERA_Alvos_Atrasados, roletaConfig);
+        Tabela_Alvos_NERA = resultadosNERA.Tabela_Alvos;
+        NERA_Alvos_Atrasados = resultadosNERA.NERA_Atrasados;
+        // ------------------------------------------------------------------
+
+        historicoAtual.unshift(num); 
+        historicoAtual = historicoAtual.slice(0, 100); 
+
+        atualizarLinhaDoTempo();
+        atualizarAnalise();
+        if (usuarioLogado) salvarSessao(usuarioLogado);
+    }
+}
+
+// ======================================================
+// FUNÇÕES DE LOGS E GESTÃO (GREEN/RED)
+// ======================================================
+
+function registrarEntrada(tipo, valor, alvos) {
+    const resultado = 'GREEN'; // Assumindo sucesso para simplificar o exemplo
+    const log = {
+        rodada: historicoAtual.length + 1,
+        tipo: tipo,
+        valor: valor,
+        alvos: alvos,
+        resultado: resultado,
+        data: new Date().toLocaleString()
+    };
+    logEntradas.unshift(log);
+    saldo += resultado === 'GREEN' ? valor * 30 : -valor; // Exemplo simplificado de cálculo
+    atualizarLogs();
+    if (usuarioLogado) salvarSessao(usuarioLogado);
+}
+
+window.resetSessao = function() {
+    if (confirm("Tem certeza que deseja RESETAR o Saldo e todos os Logs desta sessão?")) {
+        logEntradas = [];
+        saldo = 0;
+        historicoAtual = [];
+        Tabela_Alvos_NERA = {}; 
+        NERA_Alvos_Atrasados = {}; // RESET DA TABELA DE ATRASO
+        atualizarLogs();
+        atualizarLinhaDoTempo();
+        atualizarAnalise();
+        
+        if (usuarioLogado) {
+            salvarSessao(usuarioLogado);
+        }
+    }
+}
+
+// ======================================================
+// FUNÇÕES DE RENDERIZAÇÃO
+// ======================================================
+
+function atualizarAnalise() {
+    
+    // Passamos NERA_Alvos_Atrasados para analisarEstelar
+    const analise = analisarEstelar(historicoAtual, roletaConfig, Tabela_Alvos_NERA, NERA_Alvos_Atrasados); 
+    const hash = calcularHashHistorico(historicoAtual);
+    const outputDiv = document.getElementById('analise-sugerida');
+    outputDiv.innerHTML = '';
+
+    // --- NOVA SEÇÃO DE MENSAGENS DE ESPERA ---
+    let mensagensEsperaHTML = '';
+    if (analise.mensagensEspera && analise.mensagensEspera.length > 0) {
+        mensagensEsperaHTML = `<div class="alvo-espera-output">
+            <p><strong>🚨 NERA ATRAVESSADO: 7 CASAS</strong></p>
+            ${analise.mensagensEspera.map(msg => `<p class="alvo-atrasado-msg">${msg}</p>`).join('')}
+        </div>`;
+    }
+    
+    // --- CONSTRUÇÃO DO OUTPUT PRINCIPAL ---
+    let alvosFormatados = '';
+    
+    if (analise.alvosAposta && analise.alvosAposta.length > 0) {
+        alvosFormatados = `🎯 **ALVO DE ENTRADA: ${analise.alvosAposta.join(', ')}**`;
+    } else if (analise.alvos && analise.alvos.length > 0) {
+         alvosFormatados = `Alvos de Confluência: ${analise.alvos.join(' **OU** ')}`;
+    } else {
+         alvosFormatados = 'Alvos: N/A';
+    }
+
+    outputDiv.innerHTML = `
+        ${mensagensEsperaHTML}
+        <p>Status: ${analise.status}</p>
+        <p>Hash do Histórico: **${hash}** (Para garantir consistência)</p>
+        <p>Força da Confluência: **${analise.confianca}**</p>
+        <p class="alvo-sugerido-output">${alvosFormatados}</p>
+        <h3 class="recomendacao-final">${analise.recomendacao}</h3>
+    `;
+    
+    const logButtons = document.getElementById('log-buttons');
+    if (analise.confianca > 0) {
+        logButtons.classList.remove('hidden');
+    } else {
+         logButtons.classList.add('hidden');
+    }
+}
+
+function atualizarLinhaDoTempo() {
+    const timeline = document.getElementById('historico-timeline');
+    const saldoDisplay = document.getElementById('current-saldo');
+    timeline.innerHTML = '';
+    historicoAtual.forEach(num => {
+        const item = document.createElement('span');
+        const cor = roletaConfig.PROPRIEDADES[num].cor;
+        item.className = `num-item ${cor}`;
+        item.textContent = num;
+        timeline.appendChild(item);
+    });
+    saldoDisplay.textContent = saldo.toFixed(2);
+}
+
+function atualizarLogs() {
+    const logTableBody = document.getElementById('log-table-body');
+    logTableBody.innerHTML = '';
+    logEntradas.forEach(log => {
+        const row = logTableBody.insertRow();
+        row.insertCell().textContent = log.data;
+        row.insertCell().textContent = log.rodada;
+        row.insertCell().textContent = log.alvos;
+        row.insertCell().textContent = log.valor;
+        row.insertCell().textContent = log.resultado;
+        row.className = log.resultado === 'GREEN' ? 'log-green' : 'log-red';
     });
 }
 
-// ======================================================
-// 7. Persistência de Dados & Controles
-// ======================================================
-
-/**
- * Salva o log de entradas e o saldo no localStorage.
- */
-function salvarSessao() {
-    localStorage.setItem('nexus_log_entradas', JSON.stringify(logEntradas));
-    localStorage.setItem('nexus_saldo', saldo);
-}
-
-/**
- * Carrega o log de entradas e o saldo do localStorage.
- */
-function carregarSessao() {
-    const logSalvo = localStorage.getItem('nexus_log_entradas');
-    const saldoSalvo = localStorage.getItem('nexus_saldo');
-
-    if (logSalvo) {
-        logEntradas = JSON.parse(logSalvo);
+// Função de inicialização do frontend
+window.onload = function() {
+    // Inicializar Roleta Interativa (Exemplo de entrada)
+    const roletaInput = document.getElementById('roleta-input');
+    if (roletaInput) {
+        roletaInput.addEventListener('change', (e) => inserirNumeroManual(e.target.value));
     }
     
-    if (saldoSalvo) {
-        // Converte para número, garantindo que o saldo é carregado corretamente
-        saldo = parseFloat(saldoSalvo);
-    }
-}
-
-/**
- * Função de Logout (agora separada de salvar sessao)
- */
-function fazerLogout() {
-    salvarSessao(); // Garante o salvamento antes de sair
-    localStorage.removeItem('nexus_autenticado'); // Remove o token de autenticação
-    alert("Sessão finalizada. Faça login novamente para acessar.");
-    // Redireciona para a tela de login/recarrega a página para aplicar a autenticação
-    window.location.reload(); 
-}
-
-/**
- * Reseta o Saldo e o Histórico de Logs da Sessão atual.
- */
-function resetSessao() {
-    if (confirm("Tem certeza que deseja resetar o Saldo e todos os Logs? Esta ação iniciará uma nova sessão e não pode ser desfeita.")) {
-        
-        logEntradas = []; 
-        saldo = 0;
-        
-        localStorage.removeItem('nexus_log_entradas');
-        localStorage.removeItem('nexus_saldo');
-        
-        renderizarLog();
-        
-        alert("Sessão resetada! Saldo zerado e logs limpos.");
-    }
-}
-
-/**
- * Exporta o log de entradas (logEntradas) para um arquivo CSV.
- */
-function exportarLogs() {
-    if (logEntradas.length === 0) {
-        alert("Não há entradas no log para exportar.");
-        return;
-    }
-
-    const header = "ID,Timestamp,Resultado,Lucro,Historico\n";
-
-    const csvContent = logEntradas.map(entrada => {
-        const historicoCsv = `"${entrada.historico.join(',')}"`; 
-        return `${entrada.id},${entrada.timestamp},${entrada.resultado},${entrada.lucro.toFixed(2)},${historicoCsv}`;
-    }).join('\n');
-
-    const fullCsv = header + csvContent;
-
-    const blob = new Blob([fullCsv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    // Inicializar Login/Registro (Exemplo básico)
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        fazerLogin(user, pass);
+    });
     
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    
-    const today = new Date().toISOString().slice(0, 10);
-    link.setAttribute("download", `Nexus_Logs_${today}.csv`);
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Inicializar Botões de Ação
+    document.getElementById('log-green-btn').addEventListener('click', () => registrarEntrada('GREEN', 10, document.querySelector('.alvo-sugerido-output').textContent));
+    document.getElementById('log-red-btn').addEventListener('click', () => registrarEntrada('RED', 10, document.querySelector('.alvo-sugerido-output').textContent));
+    document.getElementById('logout-btn').addEventListener('click', fazerLogout);
+    document.getElementById('reset-btn').addEventListener('click', resetSessao);
 
-    alert(`Log de ${logEntradas.length} entradas exportado com sucesso!`);
-}
-
-// ======================================================
-// 8. LÓGICA DE AUTENTICAÇÃO
-// ======================================================
-
-/**
- * Tenta autenticar o usuário com as credenciais fornecidas.
- */
-function fazerLogin() {
-    const usernameInput = document.getElementById('username').value;
-    const passwordInput = document.getElementById('password').value;
-    const loginMessage = document.getElementById('login-message');
-
-    if (usernameInput === VALID_USERNAME && passwordInput === VALID_PASSWORD) {
-        // Autenticação bem-sucedida
-        localStorage.setItem('nexus_autenticado', 'true');
-        loginMessage.textContent = 'Login bem-sucedido! Acessando...';
-        loginMessage.classList.remove('alerta'); 
-        loginMessage.style.color = 'var(--green-nexus)';
-        
-        // Esconde a tela de login e mostra o conteúdo principal
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-content').classList.remove('hidden');
-
-        // Continua a inicialização da aplicação
-        inicializarAplicacao();
-
-    } else {
-        // Falha na autenticação
-        loginMessage.textContent = 'Usuário ou Senha inválidos. Tente novamente.';
-        loginMessage.classList.add('alerta');
-        loginMessage.style.color = 'var(--red-nexus)';
+    // Tentar carregar sessão se houver um usuário logado (simulado)
+    const lastUser = localStorage.getItem('last_logged_user');
+    if (lastUser) {
+        // Simulação de login automático
+        // iniciarSessao(lastUser);
     }
-}
-
-/**
- * Verifica se o usuário já está autenticado no localStorage.
- * Controla qual tela deve ser mostrada.
- */
-function verificarAutenticacao() {
-    // Tenta obter o token de autenticação
-    const autenticado = localStorage.getItem('nexus_autenticado');
-    
-    // Tenta obter os elementos, tratando se eles não existirem (apenas por segurança)
-    const loginScreen = document.getElementById('login-screen');
-    const mainContent = document.getElementById('main-content');
-    
-    if (autenticado === 'true' && mainContent && loginScreen) {
-        // Se estiver autenticado, esconde o login e mostra o conteúdo
-        loginScreen.classList.add('hidden');
-        mainContent.classList.remove('hidden');
-        inicializarAplicacao();
-    } else if (loginScreen && mainContent) {
-        // Se não estiver autenticado, garante que o login é mostrado
-        loginScreen.classList.remove('hidden');
-        mainContent.classList.add('hidden');
-    }
-    // Caso contrário, não faz nada (deixa o HTML como está)
-}
-
-/**
- * Função de inicialização separada (chamada após o login/autenticação)
- */
-function inicializarAplicacao() {
-     // 1. Carrega as configurações da roleta
-    if (typeof roletaConfig !== 'undefined') {
-         roletaData = roletaConfig; 
-    }
-    
-    // 2. Carrega a sessão salva
-    carregarSessao(); 
-
-    // 3. Renderiza a UI
-    renderizarRoleta();
-    renderizarLog(); 
-    gerarAnaliseEstelar();
-}
-
-// ======================================================
-// 9. Inicialização Principal
-// ======================================================
-
-// O ponto de entrada agora é a verificação de autenticação
-window.onload = verificarAutenticacao;
+};
