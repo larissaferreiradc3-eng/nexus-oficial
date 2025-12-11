@@ -1,30 +1,24 @@
 // VARIÁVEIS GLOBAIS
 let linhaDoTempo = [];
-let roletaData = {}; // Será carregado de roulette_data.js
+let roletaData = {}; // Objeto roletaConfig
 
 // 1. Geração da Roleta Interativa na tela
 function renderizarRoleta() {
     const roletaDiv = document.getElementById('roleta-interativa');
-    // Mapeamento básico para cores (pode ser aprimorado com roulette_data.js)
-    const cores = {
-        0: 'green',
-        'par': 'black',
-        'impar': 'red'
-    };
-    
-    // Simples: 0 a 36
+    roletaDiv.innerHTML = ''; // Limpa antes de renderizar
+
     for (let i = 0; i <= 36; i++) {
         const numeroDiv = document.createElement('div');
         numeroDiv.textContent = i;
         numeroDiv.classList.add('numero');
-        // Define cor base
-        if (i === 0) {
-            numeroDiv.classList.add(cores[0]);
-        } else if (i % 2 === 0) {
-            numeroDiv.classList.add(cores['par']);
+        
+        // Define cor usando o mapeamento do backend
+        if (roletaData.PROPRIEDADES[i]) {
+            numeroDiv.classList.add(roletaData.PROPRIEDADES[i].cor);
         } else {
-            numeroDiv.classList.add(cores['impar']);
+             numeroDiv.classList.add('neutro');
         }
+        
         numeroDiv.onclick = () => atualizarLinhaTempo(i);
         roletaDiv.appendChild(numeroDiv);
     }
@@ -34,25 +28,29 @@ function renderizarRoleta() {
 function atualizarLinhaTempo(numero) {
     const ultimoNumero = linhaDoTempo[linhaDoTempo.length - 1];
 
-    if (numero === ultimoNumero) {
-        // Regra de Correção Rápida: Clicar novamente remove
+    if (numero === ultimoNumero && linhaDoTempo.length > 0) {
+        // Regra de Correção Rápida: Clicar novamente remove o último número
         linhaDoTempo.pop();
-        console.log(`Removido: ${numero}`);
     } else {
         linhaDoTempo.push(numero);
-        console.log(`Adicionado: ${numero}`);
     }
 
     renderizarLinhaDoTempo();
+    gerarAnaliseEstelar(); // Atualiza a análise sempre que o histórico muda
 }
 
 // 3. Renderiza a Linha do Tempo na tela
 function renderizarLinhaDoTempo() {
     const linhaDiv = document.getElementById('linha-do-tempo');
-    linhaDiv.innerHTML = linhaDoTempo.map(n => `<span class="lt-numero lt-${roletaData.PROPRIEDADES[n].cor}">${n}</span>`).join(' → ');
+    
+    // Garantindo que a classe da cor está sendo usada corretamente
+    linhaDiv.innerHTML = linhaDoTempo.map(n => {
+        const cor = roletaData.PROPRIEDADES[n] ? roletaData.PROPRIEDADES[n].cor : 'neutro';
+        return `<span class="lt-numero lt-${cor}">${n}</span>`;
+    }).join(' → ');
 }
 
-// 4. Carrega o Histórico Base colado (para inicializar a Linha do Tempo)
+// 4. Carrega o Histórico Base colado
 function carregarHistorico() {
     const texto = document.getElementById('historico-paste').value;
     const historicoArray = texto.split(/[\s,;]+/)
@@ -60,43 +58,48 @@ function carregarHistorico() {
                                 .map(n => parseInt(n))
                                 .filter(n => n >= 0 && n <= 36);
 
-    // O histórico base serve como a Memória Longa.
-    // O primeiro número do histórico deve iniciar a Linha do Tempo Editável.
     if (historicoArray.length > 0) {
-        linhaDoTempo = [...historicoArray]; // Para começar com o base
+        linhaDoTempo = [...historicoArray]; 
         renderizarLinhaDoTempo();
+        gerarAnaliseEstelar();
         alert(`Histórico Base carregado! ${historicoArray.length} números.`);
     } else {
         alert("Nenhum número válido encontrado.");
     }
 }
 
-// 5. Placeholder para a Análise Estelar
+// 5. Função que chama o Módulo de Análise Estelar (O Coração do Nexus)
 function gerarAnaliseEstelar() {
-    if (linhaDoTempo.length < 3) {
-        document.getElementById('analise-sugerida').innerHTML = '<p class="alerta">Histórico muito curto. Mínimo de 3 números para Análise Estelar (Trinca).</p>';
-        return;
+    // Chama a função do backend (estelar.js)
+    const resultado = analisarEstelar(linhaDoTempo, roletaData); 
+    const analiseDiv = document.getElementById('analise-sugerida');
+    
+    // Monta a exibição do resultado
+    if (resultado.alvos && resultado.alvos.length > 0) {
+        analiseDiv.innerHTML = `
+            <p class="sugestao-titulo">🎯 ANÁLISE NEXUS (Estelar)</p>
+            <p><strong>Status:</strong> ${resultado.status}</p>
+            <p><strong>Força/Confiança:</strong> ${resultado.confianca}/9</p>
+            <p><strong>Alvos Sugeridos:</strong> <span class="alvos">${resultado.alvos.join(', ')}</span></p>
+            <p class="espera">Ação: ${resultado.recomendacao}</p>
+        `;
+    } else {
+         analiseDiv.innerHTML = `<p class="alerta">${resultado.status}</p>`;
     }
-    
-    // **AQUI CHAMAREMOS A LÓGICA DO BACKEND (estelar.js)**
-    // Ex: const resultado = analisarEstelar(linhaDoTempo, roletaData);
-    
-    // Placeholder de Sugestão
-    document.getElementById('analise-sugerida').innerHTML = `
-        <p class="sugestao-titulo">🎯 ANÁLISE ESTELAR CONVERGENTE</p>
-        <p><strong>Força:</strong> Alta Confiança (3 Pilares)</p>
-        <p><strong>Alvos:</strong> 15, 32, 19, 0 (Proteção)</p>
-        <p class="espera">Ação: Esperar 2 Rodadas para Entrada!</p>
-    `;
+}
+
+function logoutSalvarSessao() {
+    alert("Funcionalidade de Logout e Salvar Sessão em desenvolvimento!");
+    // Aqui seria o código para salvar o linhaDoTempo no localStorage ou banco de dados.
 }
 
 // Inicializa a Roleta quando a página carrega
 window.onload = () => {
-    // Apenas para garantir que o objeto roletaData existe
+    // 'roletaConfig' (o objeto completo) é carregado como 'roletaData' no escopo global
     if (typeof roletaConfig !== 'undefined') {
          roletaData = roletaConfig; 
-    } else {
-         roletaData = {}; // Default para não quebrar
     }
     renderizarRoleta();
+    // Exibe a análise inicial
+    gerarAnaliseEstelar();
 };
