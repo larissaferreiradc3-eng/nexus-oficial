@@ -4,7 +4,9 @@ let roletaData = {}; // Objeto roletaConfig
 let logEntradas = []; // Array para armazenar o histórico de resultados
 let saldo = 0; // Saldo inicial para gestão de risco
 
+// ======================================================
 // 1. Geração da Roleta Interativa na tela
+// ======================================================
 function renderizarRoleta() {
     const roletaDiv = document.getElementById('roleta-interativa');
     roletaDiv.innerHTML = ''; 
@@ -26,7 +28,9 @@ function renderizarRoleta() {
     }
 }
 
+// ======================================================
 // 2. Função principal para adicionar/remover número na Linha do Tempo
+// ======================================================
 function atualizarLinhaTempo(numero) {
     const ultimoNumero = linhaDoTempo[linhaDoTempo.length - 1];
 
@@ -41,7 +45,9 @@ function atualizarLinhaTempo(numero) {
     gerarAnaliseEstelar(); // Atualiza a análise sempre que o histórico muda
 }
 
+// ======================================================
 // 3. Renderiza a Linha do Tempo na tela
+// ======================================================
 function renderizarLinhaDoTempo() {
     const linhaDiv = document.getElementById('linha-do-tempo');
     
@@ -52,7 +58,9 @@ function renderizarLinhaDoTempo() {
     }).join(' → ');
 }
 
+// ======================================================
 // 4. Carrega o Histórico Base colado
+// ======================================================
 function carregarHistorico() {
     const texto = document.getElementById('historico-paste').value;
     const historicoArray = texto.split(/[\s,;]+/)
@@ -70,7 +78,9 @@ function carregarHistorico() {
     }
 }
 
-// 5. Função que chama o Módulo de Análise Estelar (O Coração do Nexus)
+// ======================================================
+// 5. Função que chama o Módulo de Análise Estelar
+// ======================================================
 function gerarAnaliseEstelar() {
     // Chama a função do backend (estelar.js)
     const resultado = analisarEstelar(linhaDoTempo, roletaData); 
@@ -90,6 +100,10 @@ function gerarAnaliseEstelar() {
     }
 }
 
+// ======================================================
+// 6. Gestão de Log (Green/Red) e Saldo
+// ======================================================
+
 /**
  * Registra o resultado de uma aposta baseada na sugestão Nexus.
  * @param {string} resultado - 'Green' ou 'Red'.
@@ -100,7 +114,6 @@ function registrarEntrada(resultado) {
         return;
     }
     
-    // Simulação básica de saldo
     const valorEntrada = 1; // Unidade de aposta (ex: 1 Real/Dólar)
     let lucro = 0;
 
@@ -122,6 +135,7 @@ function registrarEntrada(resultado) {
     };
 
     logEntradas.push(entrada);
+    salvarSessao(); // Salva a sessão após cada entrada
     
     // Limpar e reiniciar o ciclo após a aposta
     linhaDoTempo = []; 
@@ -129,7 +143,7 @@ function registrarEntrada(resultado) {
     gerarAnaliseEstelar(); 
     
     renderizarLog();
-    alert(`Entrada Registrada: ${resultado}! Saldo Atual: ${saldo}`);
+    alert(`Entrada Registrada: ${resultado}! Saldo Atual: ${saldo.toFixed(2)}`);
 }
 
 /**
@@ -139,9 +153,10 @@ function renderizarLog() {
     const logDiv = document.getElementById('log-entradas');
     logDiv.innerHTML = `<h4>💰 Saldo Atual: R$ ${saldo.toFixed(2)}</h4>`;
 
+    // Mostra as 10 entradas mais recentes
     logEntradas.slice(-10).reverse().forEach(entrada => {
         const classe = entrada.resultado === 'Green' ? 'log-green' : 'log-red';
-        const sinal = entrada.lucro > 0 ? '+' : '';
+        const sinal = entrada.lucro >= 0 ? '+' : '';
         
         logDiv.innerHTML += `
             <div class="log-item ${classe}">
@@ -153,18 +168,59 @@ function renderizarLog() {
     });
 }
 
+// ======================================================
+// 7. Persistência de Dados (localStorage) - NOVO
+// ======================================================
 
-function logoutSalvarSessao() {
-    alert("Funcionalidade de Logout e Salvar Sessão em desenvolvimento!");
-    // Implementação futura: Salvar logEntradas e saldo no localStorage.
+/**
+ * Salva o log de entradas e o saldo no localStorage.
+ */
+function salvarSessao() {
+    localStorage.setItem('nexus_log_entradas', JSON.stringify(logEntradas));
+    localStorage.setItem('nexus_saldo', saldo);
 }
 
-// Inicializa a Roleta quando a página carrega
+/**
+ * Carrega o log de entradas e o saldo do localStorage.
+ */
+function carregarSessao() {
+    const logSalvo = localStorage.getItem('nexus_log_entradas');
+    const saldoSalvo = localStorage.getItem('nexus_saldo');
+
+    if (logSalvo) {
+        logEntradas = JSON.parse(logSalvo);
+    }
+    
+    if (saldoSalvo) {
+        // Converte para número, garantindo que o saldo é carregado corretamente
+        saldo = parseFloat(saldoSalvo);
+    }
+}
+
+/**
+ * Função chamada ao clicar em "LOGOUT & Salvar Sessão".
+ */
+function logoutSalvarSessao() {
+    salvarSessao(); // Garante o salvamento
+    alert("Sessão salva com sucesso! O histórico e saldo foram mantidos no seu navegador.");
+}
+
+// ======================================================
+// 8. Inicialização
+// ======================================================
+
+// Inicializa a Roleta e carrega a sessão quando a página carrega
 window.onload = () => {
+    // 1. Carrega as configurações da roleta
     if (typeof roletaConfig !== 'undefined') {
          roletaData = roletaConfig; 
     }
+    
+    // 2. Carrega a sessão salva
+    carregarSessao(); 
+
+    // 3. Renderiza a UI
     renderizarRoleta();
-    renderizarLog(); // Inicializa o log e o saldo
+    renderizarLog(); // Mostra o saldo carregado
     gerarAnaliseEstelar();
 };
