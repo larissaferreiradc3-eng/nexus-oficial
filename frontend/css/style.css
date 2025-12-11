@@ -185,7 +185,7 @@ button:hover {
 
 
 /* ====================================================== */
-/* 6. ESTILOS DE LOG E CONTROLE (NOVO) */
+/* 6. ESTILOS DE LOG E CONTROLE */
 /* ====================================================== */
 
 .log-controls {
@@ -239,4 +239,15 @@ hr {
 .log-item small {
     display: block;
     color: #999;
+}
+
+/* 7. ESTILOS DE CONTROLE DE SESSÃO (NOVO) */
+.session-controls {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.session-controls button {
+    width: 48%;
 }
