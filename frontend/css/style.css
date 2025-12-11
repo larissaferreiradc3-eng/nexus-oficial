@@ -241,13 +241,26 @@ hr {
     color: #999;
 }
 
-/* 7. ESTILOS DE CONTROLE DE SESSÃO (NOVO) */
+/* 7. ESTILOS DE CONTROLE DE SESSÃO */
 .session-controls {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* Divide em 3 colunas para 3 botões */
+    gap: 10px;
     margin-top: 20px;
 }
 
 .session-controls button {
-    width: 48%;
+    width: 100%;
+    /* Override do width: 48% */
+}
+
+/* 8. ESTILOS DE EXPORTAÇÃO (CSV) (NOVO) */
+
+.btn-export {
+    background-color: #ff9800; /* Laranja para destaque de exportação */
+    color: var(--bg-dark);
+}
+
+.btn-export:hover {
+    background-color: #fb8c00;
 }
