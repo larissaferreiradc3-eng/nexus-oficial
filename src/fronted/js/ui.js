@@ -4,6 +4,10 @@ let roletaData = {}; // Objeto roletaConfig
 let logEntradas = []; // Array para armazenar o histórico de resultados
 let saldo = 0; // Saldo inicial para gestão de risco
 
+// Credenciais de Exemplo (Hardcoded)
+const VALID_USERNAME = "nexus";
+const VALID_PASSWORD = "12345";
+
 // ======================================================
 // 1. Geração da Roleta Interativa na tela
 // ======================================================
@@ -169,7 +173,7 @@ function renderizarLog() {
 }
 
 // ======================================================
-// 7. Persistência de Dados (localStorage) & Controles
+// 7. Persistência de Dados & Controles
 // ======================================================
 
 /**
@@ -198,11 +202,13 @@ function carregarSessao() {
 }
 
 /**
- * Função chamada ao clicar em "LOGOUT & Salvar Sessão".
+ * Função de Logout (agora separada de salvar sessao)
  */
-function logoutSalvarSessao() {
-    salvarSessao(); // Garante o salvamento
-    alert("Sessão salva com sucesso! O histórico e saldo foram mantidos no seu navegador.");
+function fazerLogout() {
+    salvarSessao(); // Garante o salvamento antes de sair
+    localStorage.removeItem('nexus_autenticado'); // Remove o token de autenticação
+    alert("Sessão finalizada. Faça login novamente para acessar.");
+    window.location.reload(); // Recarrega a página para voltar à tela de login
 }
 
 /**
@@ -211,15 +217,12 @@ function logoutSalvarSessao() {
 function resetSessao() {
     if (confirm("Tem certeza que deseja resetar o Saldo e todos os Logs? Esta ação iniciará uma nova sessão e não pode ser desfeita.")) {
         
-        // Zera as variáveis globais
         logEntradas = []; 
         saldo = 0;
         
-        // Limpa o armazenamento local para iniciar do zero
         localStorage.removeItem('nexus_log_entradas');
         localStorage.removeItem('nexus_saldo');
         
-        // Atualiza a interface
         renderizarLog();
         
         alert("Sessão resetada! Saldo zerado e logs limpos.");
@@ -227,7 +230,7 @@ function resetSessao() {
 }
 
 /**
- * Exporta o log de entradas (logEntradas) para um arquivo CSV. (NOVA FUNÇÃO)
+ * Exporta o log de entradas (logEntradas) para um arquivo CSV.
  */
 function exportarLogs() {
     if (logEntradas.length === 0) {
@@ -235,31 +238,24 @@ function exportarLogs() {
         return;
     }
 
-    // Cabeçalho do arquivo CSV
     const header = "ID,Timestamp,Resultado,Lucro,Historico\n";
 
-    // Mapeia o array de objetos logEntradas para linhas CSV
     const csvContent = logEntradas.map(entrada => {
-        // Garantir que a vírgula dentro do histórico não quebre o CSV (usamos aspas)
         const historicoCsv = `"${entrada.historico.join(',')}"`; 
-        
         return `${entrada.id},${entrada.timestamp},${entrada.resultado},${entrada.lucro.toFixed(2)},${historicoCsv}`;
     }).join('\n');
 
     const fullCsv = header + csvContent;
 
-    // Lógica para forçar o download do arquivo
     const blob = new Blob([fullCsv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement("a");
     link.setAttribute("href", url);
     
-    // Nome do arquivo: Nexus_Logs_AAAA-MM-DD.csv
     const today = new Date().toISOString().slice(0, 10);
     link.setAttribute("download", `Nexus_Logs_${today}.csv`);
     
-    // Simula o clique no link
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -268,12 +264,63 @@ function exportarLogs() {
 }
 
 // ======================================================
-// 8. Inicialização
+// 8. LÓGICA DE AUTENTICAÇÃO (NOVO)
 // ======================================================
 
-// Inicializa a Roleta e carrega a sessão quando a página carrega
-window.onload = () => {
-    // 1. Carrega as configurações da roleta
+/**
+ * Tenta autenticar o usuário com as credenciais fornecidas.
+ */
+function fazerLogin() {
+    const usernameInput = document.getElementById('username').value;
+    const passwordInput = document.getElementById('password').value;
+    const loginMessage = document.getElementById('login-message');
+
+    if (usernameInput === VALID_USERNAME && passwordInput === VALID_PASSWORD) {
+        // Autenticação bem-sucedida
+        localStorage.setItem('nexus_autenticado', 'true');
+        loginMessage.textContent = 'Login bem-sucedido! Acessando...';
+        loginMessage.classList.remove('alerta'); // Remove a classe vermelha
+        loginMessage.style.color = 'var(--green-nexus)';
+        
+        // Esconde a tela de login e mostra o conteúdo principal
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+
+        // Continua a inicialização da aplicação (carregar roleta, logs, etc.)
+        inicializarAplicacao();
+
+    } else {
+        // Falha na autenticação
+        loginMessage.textContent = 'Usuário ou Senha inválidos. Tente novamente.';
+        loginMessage.classList.add('alerta');
+        loginMessage.style.color = 'var(--red-nexus)';
+    }
+}
+
+/**
+ * Verifica se o usuário já está autenticado no localStorage.
+ * Controla qual tela deve ser mostrada.
+ */
+function verificarAutenticacao() {
+    const autenticado = localStorage.getItem('nexus_autenticado');
+    
+    if (autenticado === 'true') {
+        // Se estiver autenticado, esconde o login e mostra o conteúdo
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        inicializarAplicacao();
+    } else {
+        // Se não estiver autenticado, garante que o login é mostrado
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('main-content').classList.add('hidden');
+    }
+}
+
+/**
+ * Função de inicialização separada (chamada após o login/autenticação)
+ */
+function inicializarAplicacao() {
+     // 1. Carrega as configurações da roleta
     if (typeof roletaConfig !== 'undefined') {
          roletaData = roletaConfig; 
     }
@@ -283,6 +330,13 @@ window.onload = () => {
 
     // 3. Renderiza a UI
     renderizarRoleta();
-    renderizarLog(); // Mostra o saldo carregado
+    renderizarLog(); 
     gerarAnaliseEstelar();
-};
+}
+
+// ======================================================
+// 9. Inicialização Principal
+// ======================================================
+
+// O ponto de entrada agora é a verificação de autenticação
+window.onload = verificarAutenticacao;
