@@ -169,7 +169,7 @@ function renderizarLog() {
 }
 
 // ======================================================
-// 7. Persistência de Dados (localStorage) - NOVO
+// 7. Persistência de Dados (localStorage)
 // ======================================================
 
 /**
@@ -203,6 +203,27 @@ function carregarSessao() {
 function logoutSalvarSessao() {
     salvarSessao(); // Garante o salvamento
     alert("Sessão salva com sucesso! O histórico e saldo foram mantidos no seu navegador.");
+}
+
+/**
+ * Reseta o Saldo e o Histórico de Logs da Sessão atual. (NOVA FUNÇÃO)
+ */
+function resetSessao() {
+    if (confirm("Tem certeza que deseja resetar o Saldo e todos os Logs? Esta ação iniciará uma nova sessão e não pode ser desfeita.")) {
+        
+        // Zera as variáveis globais
+        logEntradas = []; 
+        saldo = 0;
+        
+        // Limpa o armazenamento local para iniciar do zero
+        localStorage.removeItem('nexus_log_entradas');
+        localStorage.removeItem('nexus_saldo');
+        
+        // Atualiza a interface
+        renderizarLog();
+        
+        alert("Sessão resetada! Saldo zerado e logs limpos.");
+    }
 }
 
 // ======================================================
